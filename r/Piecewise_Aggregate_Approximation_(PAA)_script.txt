@@ -1,0 +1,40 @@
+# install.packages("TSrepr")
+library(TSrepr)
+
+
+data <- read.csv("C:/Users/User/Desktop/glen-diplom/dataset/birth.csv")
+# head(data)
+
+df <- df <- data.frame(matrix(ncol = 1, nrow = 0))
+colnames(df) <- c('birtht')
+
+# typeof(data)
+# nrow(data)
+columns <- ncol(data)
+
+for (i in 2:columns) {
+  chunk <- data[1:12, i]
+  for (j in 1:12){
+    # print(chunk[j])
+    birtht <- chunk[j]
+    df <- rbind(df, data.frame(birtht=birtht))
+  }
+}
+
+
+par(mfrow = c(3, 1))
+
+tseries_ts <- as.ts(df)
+plot(tseries_ts, type = "l", xlab = "Time index", ylab = "Birth", col = "black", main = "Number of birth per month durin years from 1990 to 2022")
+
+paa.segments <- nrow(df) / 33
+paa_rep <- repr_paa(tseries_ts, q = paa.segments, meanC)
+plot(paa_rep, type = "l", xlab = "Index", ylab = "Birth", main = "Applying Piecewise Aggregate Approximation (PAA) on Number of birth/month 1990 - 2022")
+
+m <- mean(df[ , 1])
+std <- sd(df[ , 1])
+df[ , 1] <- df[ , 1] - m
+df[ , 1] <- df[ , 1] / std
+
+tseries_ts <- as.ts(df)
+plot(tseries_ts, type = "l", xlab = "Time index", ylab = "Birth", col = "black", main = "Normalized Number of birth/month 1990 - 2022 ")

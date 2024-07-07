@@ -1,0 +1,218 @@
+
+data <- read.csv("C:/Users/User/Desktop/glen-diplom/dataset/UNRATE.csv")
+# data <- read.csv("https://robjhyndman.com/tsdldata/data/fancy.dat")
+# head(data)
+
+df <- df <- data.frame(matrix(ncol = 1, nrow = 0))
+# colnames(df) <- c('UNRATE')
+
+# typeof(data)
+# nrow(data)
+rows <- nrow(data)
+
+for (i in 1:rows) {
+  # chunk <- data[1:12, i]
+  UNRATE <- data[i, 2]
+  # print(UNRATE)
+  df <- rbind(df, data.frame(UNRATE=UNRATE))
+}
+
+# for (i in 1:rows) {
+#   # chunk <- data[1:12, i]
+#   UNRATE <- data[i, 1]
+#   # print(UNRATE)
+#   df <- rbind(df, data.frame(UNRATE=UNRATE))
+# }
+
+# class(df)
+
+euclidean <- function(a, b) sqrt(sum((a - b)^2))
+
+
+correlation.distance <- function(p, q) {
+  diff.p <- diff(p)
+  diff.q <- diff(q)
+  pq.production <- diff.p * diff.q
+  p.square <- diff.p * diff.p
+  q.square <- diff.q * diff.q 
+  s1 <- 0
+  s2 <- 0
+  s3 <- 0
+  n <- length(p)
+  for(i in 1: (n - 1)){
+    s1 <- s1 + pq.production[i]
+    s2 <- s2 + p.square[i]
+    s3 <- s3 + q.square[i]
+  }
+  
+  s <- s2 * s3
+  s <- sqrt(s)
+  
+  return(s1 / s)
+}
+
+
+chouakria.similarity.measure <- function(p, q, k) {
+  cd <- correlation.distance(p, q)
+  ch <- 2 / (1 + exp((k * cd)))
+  euc <- euclidean(p, q)
+  
+  euc * ch
+  return(euc * ch)
+}
+
+
+distance <- function(p, q, dstance.name) {
+  if(dstance.name == "euclidean"){
+    return(euclidean(p, q))
+  }
+  else if(dstance.name == "chouakria"){
+    k <- 1
+    return(chouakria.similarity.measure(p, q, k))
+  } else {
+    return(-1)
+  }
+}
+
+
+generateSimilarityMatrix <- function(sequencLength, df, exclusion_zone, dstance.name) {
+  n <-  (nrow(df) - sequencLength) + 1
+  distance.matrix <- matrix(0, n, n)
+  
+  for (j in 1 : (nrow(df) - sequencLength)) {
+    timeSeries.sequence <- df[(j) : (j + (sequencLength - 1)) , 1]
+    exclusion.interval <- j + exclusion_zone
+    
+    for (i in j : ((nrow(df) - sequencLength) + 1)){
+      chunk <- df[i : (i + (sequencLength - 1)) , 1]
+      if(i > exclusion.interval){
+        # distance <- euclidean(chunk, timeSeries.sequence)
+        distance <- distance(chunk, timeSeries.sequence, dstance.name)
+        distance.matrix[j, i] <- distance
+        # distance.matrix[i, j] <- distance
+      }
+    }
+  }
+  
+  return (distance.matrix)
+}
+
+
+
+# normalize 
+
+# m <- mean(df[ , 1])
+# std <- sd(df[ , 1])
+# df[ , 1] <- df[ , 1] - m
+# df[ , 1] <- df[ , 1] / std
+
+# sequence.length <- 15
+# similarity.matrix <- generateSimilarityMatrix(sequence.length, df, sequence.length)
+
+miniGreaterThanZero <- function(similarity.matrix, row.index, threshold) {
+  n <- ncol(similarity.matrix)
+  distance.vector <- replicate(n, 0)
+  
+  non_zero_elements <- similarity.matrix[row.index, ( similarity.matrix[row.index, ] != 0 & similarity.matrix[row.index, ] <= threshold ) ]
+  
+  if(length(non_zero_elements) == 0 ){
+    return(distance.vector)    
+  }
+  
+  for(j in 1 : length(non_zero_elements) ){
+    for(i in row.index : n ){
+      if( !is.na(similarity.matrix[row.index, i]) & !is.na(non_zero_elements[j]) & similarity.matrix[row.index, i] == non_zero_elements[j] ){
+        distance.vector <- replace(distance.vector, i, i)
+      }
+    }
+  }    
+  return(distance.vector)
+}
+
+generate.plots <- function(similarity.matrix, epsilon.query, k, n, ylabel, mainTitle) {
+  for(i in k : n){
+    distance.vector <- miniGreaterThanZero(similarity.matrix, i, epsilon.query)
+    epsilon <- distance.vector[distance.vector != 0]
+    
+    if(length(epsilon) > 0){
+      similarity.number <- length(epsilon)
+      
+      par(mfrow = c(2, 2))
+      layout(matrix(c(1, 1, 2, 3), nrow = 2, byrow = TRUE))
+      
+      # var = readline(prompt = "press yes to acept and false to refuse : ");
+      # print(var)
+      
+      # plot(c(1:length(df[,1])), df[,1], type = "l", xlab = "Index", ylab = "Values", col = "black", main = "Multiple Time Series")
+      plot(c(1:length(df[,1])), df[,1], type = "l", xlab = "Time Index", ylab = ylabel, col = "black", main = mainTitle)
+      lines(c(i : (i + sequence.length - 1)), df[i : (i + sequence.length - 1), 1], col = "green")
+      for(j in 1: similarity.number){
+        lines(c(epsilon[j] : (epsilon[j] + sequence.length - 1)), df[epsilon[j] : (epsilon[j] + sequence.length - 1), 1], col = "red")
+      }
+      
+      plot(as.ts(df[i : (i + sequence.length - 1), 1]), type = "l", xlab = "Date", ylab = "Values", col = "black", main = "Motifs")
+      for(j in 1: similarity.number){
+        lines(as.ts(df[epsilon[j] : (epsilon[j] + sequence.length - 1), 1]), col = "blue")
+      }
+    } 
+  }
+}
+
+
+sequence.length <- 25
+similarity.matrix <- generateSimilarityMatrix(sequence.length, df, sequence.length, "chouakria")
+
+
+# epsilon.query <- sd(df[ , 1])
+epsilon.query <- sd(df[ , 1]) * 2.8
+
+# n <- ncol(similarity.matrix)
+n <- 600
+k <- 501
+generate.plots(similarity.matrix, epsilon.query, k, n, "unemployed", "unemployed rate time series")
+
+
+
+# install.packages("tsmp")
+library(tsmp)
+
+tseries_ts <- as.ts(df)
+mp <- tsmp(tseries_ts, window_size= 20, mode ="stamp")  # , mode = "stomp"
+mot <- find_motif(mp, n_motifs= 20, n_neighbors= 20, radius= 15, exclusion_zone= 20)  # mode= "Guided",  mode= "Unconstrained" , exclusion_zone= 20
+plot(mot)
+
+
+# install.packages("STMotif")
+# 
+# library(STMotif)
+# motifs <- SearchSTMotifs(tseries_ts, min_size=5, max_size=15, threshold=0.85)
+# plot(motifs)
+
+
+# install.packages("TSrepr")
+library(TSrepr)
+# repr_sax(tseries_ts, q = 3, a = 4, eps = 0.9)
+
+# paa.segments <- length(df[,1])/350
+paa.segments <- 2
+paa_rep <- repr_paa(tseries_ts, q = paa.segments, meanC)
+
+mp <- tsmp(paa_rep, window_size=5, mode = "stomp")
+mot <- find_motif(mp, n_motifs= 7, n_neighbors= 20, radius = 1.00515 , exclusion_zone= 5)  # mode= "Guided"    
+plot(mot)
+
+
+
+# install.packages("dtwclust")
+# library(dtwclust)
+# tsclust_results <- tsclust(time_series_data, type="partitional", k=3, distance="dtw")
+# plot(tsclust_results)
+# 
+install.packages("TSclust")
+library(TSclust)
+diss_matrix <- diss(tseries_ts, "DTW")  # DTW: Dynamic Time Warping
+clusters <- pam(diss_matrix, k=3)  # Partitioning Around Medoids
+plot(clusters)
+
+
+

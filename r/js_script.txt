@@ -1,0 +1,228 @@
+
+filter.data.frame <- function(data, col.number.to.filter, filter.value){
+  filtered_df <- subset(data, data[, col.number.to.filter] == filter.value)
+  return(filtered_df)
+}
+
+
+time.series.from.dataframe <- function(data, col.number, col.number.end, row.start, row.end){
+  if(col.number.end != -1){
+    time.series.from.dataframe.multu.column(data, col.number, col.number.end, row.start, row.end)
+  }else {
+    df <- data.frame(matrix(ncol = 1, nrow = 0))
+    rows <- nrow(data)
+    
+    for (i in 1:rows) {
+      UNRATE <- data[i, col.number]
+      df <- rbind(df, data.frame(UNRATE=UNRATE))
+    }
+    
+    return(df)
+  }
+}
+
+time.series.from.dataframe.multu.column <- function(data, col.number, col.number.end, row.start, row.end){
+  df <- data.frame(matrix(ncol = 1, nrow = 0))  
+  # rows <- nrow(data)
+  # 
+  # for (i in 1:rows) {
+  #   # chunk <- data[1:12, i]
+  #   UNRATE <- data[i, col.number]
+  #   df <- rbind(df, data.frame(UNRATE=UNRATE))
+  # }
+  
+  # columns <- ncol(data)
+  
+  for (i in col.number:col.number.end) {  # 2:columns
+    chunk <- data[row.start:row.end, i]  # 1:12
+    for (j in row.start:row.end){  # 1:12
+      # print(chunk[j])
+      UNRATE <- chunk[j]
+      df <- rbind(df, data.frame(UNRATE=UNRATE))
+    }
+  }
+  
+  return(df)
+}
+
+
+euclidean <- function(a, b) sqrt(sum((a - b)^2))
+
+
+correlation.distance <- function(p, q) {
+  diff.p <- diff(p)
+  diff.q <- diff(q)
+  pq.production <- diff.p * diff.q
+  p.square <- diff.p * diff.p
+  q.square <- diff.q * diff.q 
+  s1 <- 0
+  s2 <- 0
+  s3 <- 0
+  n <- length(p)
+  for(i in 1: (n - 1)){
+    s1 <- s1 + pq.production[i]
+    s2 <- s2 + p.square[i]
+    s3 <- s3 + q.square[i]
+  }
+  
+  s <- s2 * s3
+  s <- sqrt(s)
+  
+  return(s1 / s)
+}
+
+
+chouakria.similarity.measure <- function(p, q, k) {
+  cd <- correlation.distance(p, q)
+  ch <- 2 / (1 + exp((k * cd)))
+  euc <- euclidean(p, q)
+  
+  euc * ch
+  return(euc * ch)
+}
+
+
+distance <- function(p, q, dstance.name) {
+  if(dstance.name == "euclidean"){
+    return(euclidean(p, q))
+  }
+  else if(dstance.name == "chouakria"){
+    k <- 1
+    return(chouakria.similarity.measure(p, q, k))
+  } else {
+    return(-1)
+  }
+}
+
+
+generateSimilarityMatrix <- function(sequencLength, df, exclusion_zone, dstance.name) {
+  n <-  (nrow(df) - sequencLength) + 1
+  distance.matrix <- matrix(0, n, n)
+  
+  for (j in 1 : (nrow(df) - sequencLength)) {
+    timeSeries.sequence <- df[(j) : (j + (sequencLength - 1)) , 1]
+    exclusion.interval <- j + exclusion_zone
+    
+    for (i in j : ((nrow(df) - sequencLength) + 1)){
+      chunk <- df[i : (i + (sequencLength - 1)) , 1]
+      if(i > exclusion.interval){
+        # distance <- euclidean(chunk, timeSeries.sequence)
+        distance <- distance(chunk, timeSeries.sequence, dstance.name)
+        distance.matrix[j, i] <- distance
+        # distance.matrix[i, j] <- distance
+      }
+    }
+  }
+  
+  return (distance.matrix)
+}
+
+
+miniGreaterThanZero <- function(similarity.matrix, row.index, threshold) {
+  n <- ncol(similarity.matrix)
+  distance.vector <- replicate(n, 0)
+  
+  non_zero_elements <- similarity.matrix[row.index, ( similarity.matrix[row.index, ] != 0 & similarity.matrix[row.index, ] <= threshold ) ]
+  
+  if(length(non_zero_elements) == 0 ){
+    return(distance.vector)    
+  }
+  
+  for(j in 1 : length(non_zero_elements) ){
+    for(i in row.index : n ){
+      if( !is.na(similarity.matrix[row.index, i]) & !is.na(non_zero_elements[j]) & similarity.matrix[row.index, i] == non_zero_elements[j] ){
+        distance.vector <- replace(distance.vector, i, i)
+      }
+    }
+  }    
+  return(distance.vector)
+}
+
+generate.plots <- function(similarity.matrix, epsilon.query, k, n, ylabel, mainTitle, df, sequence.length) {
+  
+ print(nrow(similarity.matrix))
+  n <- min(n, nrow(similarity.matrix))
+  for(i in k : n){
+    distance.vector <- miniGreaterThanZero(similarity.matrix, i, epsilon.query)
+    epsilon <- distance.vector[distance.vector != 0]
+    
+    if(length(epsilon) > 0){
+      similarity.number <- length(epsilon)
+      
+      par(mfrow = c(2, 2))
+      layout(matrix(c(1, 1, 2, 3), nrow = 2, byrow = TRUE))
+      
+      # var = readline(prompt = "press yes to acept and false to refuse : ");
+      # print(var)
+      
+      # plot(c(1:length(df[,1])), df[,1], type = "l", xlab = "Index", ylab = "Values", col = "black", main = "Multiple Time Series")
+      plot(c(1:length(df[,1])), df[,1], type = "l", xlab = "Time Index", ylab = ylabel, col = "black", main = mainTitle)
+      lines(c(i : (i + sequence.length - 1)), df[i : (i + sequence.length - 1), 1], col = "green")
+      for(j in 1: similarity.number){
+        lines(c(epsilon[j] : (epsilon[j] + sequence.length - 1)), df[epsilon[j] : (epsilon[j] + sequence.length - 1), 1], col = "red")
+      }
+      
+      plot(as.ts(df[i : (i + sequence.length - 1), 1]), type = "l", xlab = "Date", ylab = "Values", col = "black", main = "Motifs")
+      for(j in 1: similarity.number){
+        lines(as.ts(df[epsilon[j] : (epsilon[j] + sequence.length - 1), 1]), col = "blue")
+      }
+    } 
+  }
+}
+
+
+normalize.timeseries <- function(df) {
+  m <- mean(df[ , 1])
+  std <- sd(df[ , 1])
+  df[ , 1] <- df[ , 1] - m
+  df[ , 1] <- df[ , 1] / std
+  
+  return(df)
+}
+
+
+explore.motif <- function(data.path, column.number.to.filter, filter.value, column.number.to.extract.data, sequence.length, distance.name, epsilon.query, k, n, col.number.end, row.start, row.end) {
+  df <- get.timeseries(data.path, column.number.to.filter, filter.value, column.number.to.extract.data, col.number.end, row.start, row.end)
+  similarity.matrix <- generateSimilarityMatrix(sequence.length, df, sequence.length, distance.name)  # euclidean # chouakria
+  
+  # return(similarity.matrix)
+  my_dataframe <- as.data.frame(similarity.matrix)
+  return(my_dataframe)
+}
+
+# get.timeseries <- function(data.path, column.number.to.filter, filter.value, column.number.to.extract.data) {
+#   data <- read.csv(data.path)
+#   
+#   filtered_df <- filter.data.frame(data, column.number.to.filter, filter.value)
+#   df <- time.series.from.dataframe(filtered_df, column.number.to.extract.data)
+#   df <- normalize.timeseries(df)
+#   
+#   return(df)
+# }
+
+get.timeseries <- function(data.path, column.number.to.filter, filter.value, column.number.to.extract.data, col.number.end, row.start, row.end) {
+  data <- read.csv(data.path)
+  
+  if(column.number.to.filter != -1){
+    filtered_df <- filter.data.frame(data, column.number.to.filter, filter.value)
+    # df <- time.series.from.dataframe(filtered_df, column.number.to.extract.data) 
+    df <- time.series.from.dataframe(filtered_df, column.number.to.extract.data, col.number.end, row.start, row.end)
+  }else{
+    # df <- time.series.from.dataframe(data, column.number.to.extract.data)
+    df <- time.series.from.dataframe(data, column.number.to.extract.data, col.number.end, row.start, row.end)
+  }
+  
+  df <- normalize.timeseries(df)
+  
+  return(df)
+}
+
+get.timeseries.data <- function(data.path, column.number.to.filter, filter.value, column.number.to.extract.data, col.number.end, row.start, row.end) {
+  data <- get.timeseries(data.path, column.number.to.filter, filter.value, column.number.to.extract.data, col.number.end, row.start, row.end)
+    return(data[,1]) 
+}
+
+get.data.bruto <- function(data.path){
+  data <- read.csv(data.path)
+  return(data)
+}

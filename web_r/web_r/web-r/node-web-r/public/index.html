@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8"/>
+    <title>Text Textures</title>
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body>
+<div class="navbar">
+    <a href="/home">Home</a>
+    <a href="/about">About</a>
+    <a href="/" class="active">Find Motif (Brute Force Method) </a>
+    <a href="#">Find Motif </a>
+    <a href="#">Contact</a>
+</div>
+
+<div class="page-container">
+<!--    <div class="nav-container"></div>-->
+    <div class="side-container">
+            <div class="form-container file-upload-container">
+                <input type="file" id="fileInput"/>
+                <button id="uploadFile">Upload</button>
+            </div>
+
+        <div class="form-container">
+            <form>
+                <div class="form-group">
+                    <label for="dataPath">Data Path</label>
+                    <select id="fileName" name="dataPath">
+                        <option value="" disabled selected>Select an option</option>
+                    </select>
+                </div>
+            </form>
+
+            <button id="showDataset"> Show dataset</button>
+        </div>
+
+        <div class="form-container">
+            <form>
+                <div class="form-group">
+                    <label for="dataPath">Data Path</label>
+                    <select id="dataPath" name="dataPath">
+                        <option value="" disabled selected>Select an option</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <h4> Column To Filter </h4>
+                    <div id="columnToFilterId">
+
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="filterValue">Filter Value</label>
+                    <input type="text" id="filterValue" name="filterValue">
+                </div>
+
+                <div class="form-group">
+                    <h4> Column To Extract Data </h4>
+                    <div id="columnToExtractDataId">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="distanceName">Distance Name</label>
+                    <select id="distanceName" name="distanceName">
+                        <option value=""></option>
+                        <option value="euclidean"> Euclidean</option>
+                        <option value="chouakria"> Chouakria</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="sequenceLength">Sequence Length</label>
+                    <input type="number" id="sequenceLength" name="sequenceLength">
+                </div>
+
+                <div class="form-group">
+                    <label for="epsilonQuery">Epsilon Query</label>
+                    <input type="number" id="epsilonQuery" name="epsilonQuery" step="0.0001">
+                </div>
+
+                <div class="form-group">
+                    <label for="k">K</label>
+                    <input type="number" id="k" name="k">
+                </div>
+
+                <div class="form-group">
+                    <label for="n">N</label>
+                    <input type="number" id="n" name="n">
+                </div>
+
+                <div class="form-group">
+                    <label for="n">Min row number to start selection </label>
+                    <input type="number" id="min-row" name="min-row">
+                </div>
+
+                <div class="form-group">
+                    <label for="n">Max row number to start selection </label>
+                    <input type="number" id="max-row" name="max-row">
+                </div>
+
+            </form>
+            <button id="idButton"> Find Motifs</button>
+        </div>
+
+
+    </div>
+    <div class="content-container">
+
+        <div id="table-container">
+<!--            <table id="dynamicTable">-->
+<!--                <thead>-->
+<!--                <tr id="headerRow"></tr>-->
+<!--                </thead>-->
+<!--                <tbody id="tableBody">-->
+<!--                </tbody>-->
+<!--            </table>-->
+            <div id="tableBody"> </div>
+        </div>
+
+        <div id="main-container"></div>
+
+    </div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="js/scripts.js" type="module"></script>
+</body>
+
+</html>
